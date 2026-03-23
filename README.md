@@ -1,10 +1,9 @@
-[![npm](https://img.shields.io/npm/v/%40obfious%2Fbrowser)](https://www.npmjs.com/package/@obfious/browser) [![bundle](https://img.shields.io/bundlephobia/minzip/%40obfious%2Fbrowser)](https://bundlephobia.com/package/@obfious/browser) [![CI](https://github.com/metaphor-cloud/obfious-oss/actions/workflows/ci.yml/badge.svg)](https://github.com/metaphor-cloud/obfious-oss/actions/workflows/ci.yml) [![license](https://img.shields.io/github/license/metaphor-cloud/obfious-oss)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
-
 # obfious
+[![npm](https://img.shields.io/npm/v/%40obfious%2Fbrowser)](https://www.npmjs.com/package/@obfious/browser) [![bundle](https://img.shields.io/bundlephobia/minzip/%40obfious%2Fbrowser)](https://bundlephobia.com/package/@obfious/browser) [![CI](https://github.com/metaphor-cloud/obfious-browser/actions/workflows/ci.yml/badge.svg)](https://github.com/metaphor-cloud/obfious-browser/actions/workflows/ci.yml) [![license](https://img.shields.io/github/license/metaphor-cloud/obfious-browser)](LICENSE) [![TypeScript](https://img.shields.io/badge/TypeScript-strict-blue)](https://www.typescriptlang.org/)
 
 **Client-side device identity using ECDSA keypairs and Pedersen commitments. Raw device signals never leave the browser.**
 
-**[Live demo →](https://metaphor-cloud.github.io/obfious-oss/)**
+**[Live demo →](https://metaphor-cloud.github.io/obfious-browser/)**
 
 Obfious is not a fingerprinting library. It generates a cryptographic device identity: a non-extractable ECDSA signing key bound to the browser, a zero-knowledge-compatible Pedersen commitment over hashed device signals, and local verification through hash vector comparison. No data is transmitted. No server is needed. The identity persists in IndexedDB and can be verified entirely client-side.
 
@@ -288,8 +287,8 @@ Requires `crypto.subtle` (WebCrypto API) and `indexedDB`. Both are available in 
 ### Setup
 
 ```bash
-git clone https://github.com/metaphor-cloud/obfious-oss.git
-cd obfious-oss
+git clone https://github.com/metaphor-cloud/obfious-browser.git
+cd obfious-browser
 npm install
 npm run dev
 ```
