@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Obfious — Device Identity Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg-card: #111118;
+    --bg-card-hover: #16161f;
+    --bg-input: #0d0d14;
+    --border: #1e1e2a;
+    --border-focus: #2a2a3a;
+    --accent: #00ff88;
+    --accent-dim: rgba(0, 255, 136, 0.12);
+    --accent-glow: rgba(0, 255, 136, 0.06);
+    --red: #ff4466;
+    --red-dim: rgba(255, 68, 102, 0.12);
+    --yellow: #ffcc00;
+    --yellow-dim: rgba(255, 204, 0, 0.12);
+    --text: #e8e8ef;
+    --text-muted: #6b6b80;
+    --text-dim: #444458;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Loading screen ── */
+  #loading {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  #loading.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #loading .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  #loading p {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Error state ── */
+  #error-state {
+    display: none;
+    text-align: center;
+    padding: 120px 24px;
+  }
+  #error-state .error-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+  #error-state h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  #error-state p {
+    color: var(--text-muted);
+    font-size: 14px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  #error-state code {
+    display: block;
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    text-align: left;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    word-break: break-all;
+  }
+
+  #app { display: none; }
+
+  /* ── Hero ── */
+  .hero {
+    text-align: center;
+    padding: 100px 0 60px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+    line-height: 1.15;
+  }
+  .hero .device-id-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0, 255, 136, 0.2);
+    border-radius: 100px;
+    padding: 10px 24px;
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+    cursor: default;
+    transition: var(--transition);
+    animation: fadeInUp 0.6s ease 0.2s both;
+  }
+  .hero .device-id-pill .dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .hero .subtitle {
+    color: var(--text-muted);
+    font-size: 16px;
+    max-width: 440px;
+    margin: 0 auto;
+    line-height: 1.7;
+    animation: fadeInUp 0.6s ease 0.4s both;
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* ── Section headings ── */
+  .section {
+    margin-bottom: 48px;
+    animation: fadeInUp 0.5s ease both;
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color var(--transition);
+  }
+  .card:hover { border-color: var(--border-focus); }
+
+  .card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background var(--transition);
+  }
+  .card-row:last-child { border-bottom: none; }
+  .card-row:hover { background: var(--bg-card-hover); }
+  .card-row .label {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    min-width: 130px;
+  }
+  .card-row .value {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    text-align: right;
+    word-break: break-all;
+    cursor: default;
+  }
+  .card-row .value.expandable {
+    cursor: pointer;
+    position: relative;
+  }
+  .card-row .value.expandable::after {
+    content: '...';
+    color: var(--text-dim);
+  }
+  .card-row .value.expandable.expanded::after {
+    content: '';
+  }
+  .card-row .value .copy-hint {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-left: 8px;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .card-row:hover .copy-hint { opacity: 1; }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    outline: none;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary:hover { box-shadow: 0 0 20px var(--accent-dim); }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+  }
+  .btn-secondary {
+    background: var(--bg-card);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    border-color: var(--border-focus);
+    background: var(--bg-card-hover);
+  }
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(255, 68, 102, 0.2);
+  }
+  .btn-danger:hover { box-shadow: 0 0 20px var(--red-dim); }
+
+  /* ── Verification result ── */
+  .verify-result {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: none;
+    animation: fadeInUp 0.3s ease;
+  }
+  .verify-result.visible { display: block; }
+  .verify-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+  }
+  .verify-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .verify-row .vr-label {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .verify-row .vr-value {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .match-true { color: var(--accent); }
+  .match-false { color: var(--red); }
+
+  .similarity-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .similarity-bar {
+    width: 120px;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  .similarity-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--accent);
+  }
+  .similarity-bar-fill.low { background: var(--red); }
+  .similarity-bar-fill.mid { background: var(--yellow); }
+
+  /* ── Input ── */
+  .input-group {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .input {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--text-dim); }
+
+  .signature-output {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    word-break: break-all;
+    line-height: 1.6;
+    display: none;
+  }
+  .signature-output.visible { display: block; animation: fadeInUp 0.3s ease; }
+  .signature-output .sig-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .signature-output .sig-value { color: var(--text); }
+  .sig-verified {
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .sig-verified.valid { color: var(--accent); }
+  .sig-verified.invalid { color: var(--red); }
+
+  /* ── Components grid ── */
+  .components-toggle {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .components-toggle:hover {
+    border-color: var(--border-focus);
+    color: var(--text);
+  }
+  .components-toggle .arrow {
+    transition: transform var(--transition);
+    font-size: 10px;
+  }
+  .components-toggle.open .arrow { transform: rotate(180deg); }
+
+  .components-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    opacity: 0;
+  }
+  .components-grid.open { max-height: 500px; opacity: 1; }
+
+  .component-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    transition: border-color var(--transition);
+  }
+  .component-item:hover { border-color: var(--border-focus); }
+  .component-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .component-dot.collected { background: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
+  .component-dot.unavailable { background: var(--text-dim); }
+  .component-name {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .component-status {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+  }
+
+  /* ── Architecture ── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .arch-card {
+    padding: 24px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-align: center;
+    transition: all var(--transition);
+  }
+  .arch-card:hover {
+    border-color: var(--border-focus);
+    transform: translateY(-2px);
+  }
+  .arch-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-dim);
+    border-radius: var(--radius);
+    font-size: 20px;
+  }
+  .arch-card h3 {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .arch-card p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+
+  /* ── Actions row ── */
+  .actions-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 60px 0 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+  .footer p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: opacity var(--transition);
+  }
+  .footer a:hover { opacity: 0.8; }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .hero h1 { font-size: 28px; }
+    .hero .device-id-pill { font-size: 14px; padding: 8px 18px; }
+    .arch-grid { grid-template-columns: 1fr; }
+    .card-row { flex-direction: column; gap: 4px; }
+    .card-row .value { text-align: left; }
+    .input-group { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Generating device identity...</p>
+</div>
+
+<!-- Error state -->
+<div id="error-state" class="container">
+  <div class="error-icon">!</div>
+  <h2>Failed to initialize</h2>
+  <p>Could not create a device identity. Make sure the library is built and available.</p>
+  <code id="error-message"></code>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1>Your device identity</h1>
+      <div class="device-id-pill">
+        <span class="dot"></span>
+        <span id="hero-device-id">________________</span>
+      </div>
+      <p class="subtitle">Generated locally. No data sent anywhere.<br>Cryptographic proof of device.</p>
+    </div>
+  </section>
+
+  <div class="container">
+
+    <!-- Identity Card -->
+    <section class="section" style="animation-delay: 0.1s">
+      <div class="section-label">Identity</div>
+      <div class="section-title">Device profile</div>
+      <div class="card">
+        <div class="card-row">
+          <span class="label">Device ID</span>
+          <span class="value" id="card-device-id"></span>
+        </div>
+        <div class="card-row">
+          <span class="label">Public key</span>
+          <span class="value expandable" id="card-pubkey" onclick="toggleExpand(this)" title="Click to expand"></span>
+        </div>
+        <div class="card-row">
+          <span class="label">Commitment</span>
+          <span class="value expandable" id="card-commitment" onclick="toggleExpand(this)" title="Click to expand"></span>
+        </div>
+        <div class="card-row">
+          <span class="label">Components</span>
+          <span class="value" id="card-components"></span>
+        </div>
+        <div class="card-row">
+          <span class="label">Created</span>
+          <span class="value" id="card-created"></span>
+        </div>
+        <div class="card-row">
+          <span class="label">Persistent</span>
+          <span class="value" id="card-persistent"></span>
+        </div>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-secondary" onclick="exportDevice()">Export JSON</button>
+        <button class="btn btn-danger" onclick="destroyDevice()">Destroy identity</button>
+      </div>
+    </section>
+
+    <!-- Verification -->
+    <section class="section" style="animation-delay: 0.2s">
+      <div class="section-label">Verification</div>
+      <div class="section-title">Live verification demo</div>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+        Re-collect browser signals and compare against the stored Pedersen commitment.
+      </p>
+      <button class="btn btn-primary" id="verify-btn" onclick="runVerify()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Verify device
+      </button>
+      <div class="verify-result" id="verify-result">
+        <div class="verify-row">
+          <span class="vr-label">Match</span>
+          <span class="vr-value" id="vr-match"></span>
+        </div>
+        <div class="verify-row">
+          <span class="vr-label">Similarity</span>
+          <span class="vr-value">
+            <div class="similarity-bar-wrapper">
+              <div class="similarity-bar">
+                <div class="similarity-bar-fill" id="vr-similarity-bar"></div>
+              </div>
+              <span id="vr-similarity-text"></span>
+            </div>
+          </span>
+        </div>
+        <div class="verify-row">
+          <span class="vr-label">Drifted components</span>
+          <span class="vr-value" id="vr-drifted"></span>
+        </div>
+        <div class="verify-row">
+          <span class="vr-label">Time taken</span>
+          <span class="vr-value" id="vr-time" style="color: var(--text-muted)"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signing -->
+    <section class="section" style="animation-delay: 0.3s">
+      <div class="section-label">Cryptography</div>
+      <div class="section-title">Challenge signing demo</div>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">
+        Sign an arbitrary challenge with the device ECDSA P-256 key.
+      </p>
+      <div class="input-group">
+        <input class="input" type="text" id="challenge-input" placeholder="Enter a challenge string..." value="hello obfious">
+        <button class="btn btn-primary" id="sign-btn" onclick="runSign()">Sign</button>
+        <button class="btn btn-secondary" id="sig-verify-btn" onclick="runSigVerify()" disabled>Verify</button>
+      </div>
+      <div class="signature-output" id="sig-output">
+        <div class="sig-label">ECDSA Signature (base64url)</div>
+        <div class="sig-value" id="sig-value"></div>
+        <div class="sig-verified" id="sig-verified"></div>
+      </div>
+    </section>
+
+    <!-- Components -->
+    <section class="section" style="animation-delay: 0.4s">
+      <div class="section-label">Signals</div>
+      <div class="section-title">Signal components</div>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 12px;">
+        Browser APIs sampled to build the device fingerprint.
+      </p>
+      <button class="components-toggle" id="components-toggle" onclick="toggleComponents()">
+        <span id="components-summary"></span>
+        <span class="arrow">&#9660;</span>
+      </button>
+      <div class="components-grid" id="components-grid"></div>
+    </section>
+
+    <!-- Architecture -->
+    <section class="section" style="animation-delay: 0.5s">
+      <div class="section-label">How it works</div>
+      <div class="section-title">Architecture</div>
+      <div class="arch-grid">
+        <div class="arch-card">
+          <div class="arch-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <h3>Keypair</h3>
+          <p>ECDSA P-256 key generated via WebCrypto and stored in IndexedDB. Never leaves the device.</p>
+        </div>
+        <div class="arch-card">
+          <div class="arch-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <h3>Commitment</h3>
+          <p>Pedersen commitment over collected signals. Binds the fingerprint without revealing it.</p>
+        </div>
+        <div class="arch-card">
+          <div class="arch-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3>Verify</h3>
+          <p>Re-collect signals and compare against the commitment. Detects drift without exposing raw values.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p>
+        Built by <strong>Obfious</strong>. For server-side correlation, JA4 TLS fingerprinting,
+        and dashboards &rarr; <a href="https://obfious.com" target="_blank" rel="noopener">obfious.com</a>
+      </p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="obfious.min.js"></script>
+<script>
+  // Fallback for local development (npm run build, then open demo/index.html)
+  if (typeof Obfious === 'undefined') {
+    document.write('<script src="../dist/obfious.min.js"><\/script>');
+  }
+</script>
+<script>
+(async function () {
+  const COMPONENT_NAMES = [
+    'canvas', 'webgl', 'audio', 'fonts', 'screen',
+    'platform', 'storage', 'math', 'timezone', 'webrtc'
+  ];
+
+  let device = null;
+  let lastSignature = null;
+  let lastChallenge = null;
+
+  // ── Helpers ──
+
+  function truncate(str, len) {
+    if (!str || str.length <= len) return str;
+    return str.slice(0, len);
+  }
+
+  function formatTimestamp(ts) {
+    const d = new Date(ts);
+    return d.toLocaleString(undefined, {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+  }
+
+  function base64urlDecode(str) {
+    const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64 + '='.repeat((4 - base64.length % 4) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  async function importPublicKey(base64urlKey) {
+    const raw = base64urlDecode(base64urlKey);
+    return crypto.subtle.importKey(
+      'raw', raw,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      true, ['verify']
+    );
+  }
+
+  // ── Expand/collapse values ──
+  window.toggleExpand = function (el) {
+    if (el.classList.contains('expanded')) {
+      el.classList.remove('expanded');
+      el.textContent = truncate(el.dataset.full, 24);
+    } else {
+      el.classList.add('expanded');
+      el.textContent = el.dataset.full;
+    }
+  };
+
+  // ── Populate UI ──
+  function populateCard() {
+    document.getElementById('hero-device-id').textContent = device.id;
+    document.getElementById('card-device-id').textContent = device.id;
+
+    const pubkeyEl = document.getElementById('card-pubkey');
+    pubkeyEl.dataset.full = device.publicKey;
+    pubkeyEl.textContent = truncate(device.publicKey, 24);
+
+    const commitEl = document.getElementById('card-commitment');
+    commitEl.dataset.full = device.commitment;
+    commitEl.textContent = truncate(device.commitment, 24);
+
+    document.getElementById('card-components').textContent = device.components + ' signals';
+    document.getElementById('card-created').textContent = formatTimestamp(device.createdAt);
+
+    const persistentEl = document.getElementById('card-persistent');
+    Obfious.Device.exists().then(function (exists) {
+      persistentEl.textContent = exists ? 'Yes' : 'No';
+      persistentEl.style.color = exists ? 'var(--accent)' : 'var(--red)';
+    });
+  }
+
+  function populateComponents() {
+    const total = COMPONENT_NAMES.length;
+    const collected = device.components;
+    document.getElementById('components-summary').textContent =
+      collected + ' / ' + total + ' components collected';
+
+    const grid = document.getElementById('components-grid');
+    grid.innerHTML = '';
+    // We can't determine which specific collectors succeeded from the public API,
+    // only the total count. Show all component names with aggregate status.
+    COMPONENT_NAMES.forEach(function (name) {
+      // If all or none collected, we know individual status; otherwise mark all as active
+      // since most collectors succeed and we can't distinguish from the count alone.
+      const isCollected = collected > 0;
+      const item = document.createElement('div');
+      item.className = 'component-item';
+      item.innerHTML =
+        '<span class="component-dot ' + (isCollected ? 'collected' : 'unavailable') + '"></span>' +
+        '<span class="component-name">' + name + '</span>' +
+        '<span class="component-status">' + (isCollected ? 'active' : 'n/a') + '</span>';
+      grid.appendChild(item);
+    });
+  }
+
+  // ── Toggle components ──
+  window.toggleComponents = function () {
+    const toggle = document.getElementById('components-toggle');
+    const grid = document.getElementById('components-grid');
+    toggle.classList.toggle('open');
+    grid.classList.toggle('open');
+  };
+
+  // ── Verify ──
+  window.runVerify = async function () {
+    const btn = document.getElementById('verify-btn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+
+    try {
+      const start = performance.now();
+      const result = await device.verify(device.commitment);
+      const elapsed = (performance.now() - start).toFixed(1);
+
+      const panel = document.getElementById('verify-result');
+      panel.classList.add('visible');
+
+      const matchEl = document.getElementById('vr-match');
+      matchEl.textContent = result.match ? 'True' : 'False';
+      matchEl.className = 'vr-value ' + (result.match ? 'match-true' : 'match-false');
+
+      const similarity = typeof result.similarity === 'number' ? result.similarity : 1;
+      const pct = Math.round(similarity * 100);
+      const bar = document.getElementById('vr-similarity-bar');
+      bar.style.width = pct + '%';
+      bar.className = 'similarity-bar-fill' +
+        (pct < 50 ? ' low' : pct < 80 ? ' mid' : '');
+      document.getElementById('vr-similarity-text').textContent = pct + '%';
+
+      document.getElementById('vr-drifted').textContent =
+        (result.driftedComponents || 0) + ' component' +
+        ((result.driftedComponents || 0) !== 1 ? 's' : '');
+
+      document.getElementById('vr-time').textContent = elapsed + ' ms';
+    } catch (err) {
+      alert('Verification error: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Verify device';
+    }
+  };
+
+  // ── Sign ──
+  window.runSign = async function () {
+    const challenge = document.getElementById('challenge-input').value.trim();
+    if (!challenge) return;
+
+    const btn = document.getElementById('sign-btn');
+    btn.disabled = true;
+    btn.textContent = 'Signing...';
+
+    try {
+      lastSignature = await device.sign(challenge);
+      lastChallenge = challenge;
+
+      const output = document.getElementById('sig-output');
+      output.classList.add('visible');
+      document.getElementById('sig-value').textContent = lastSignature;
+      document.getElementById('sig-verified').textContent = '';
+      document.getElementById('sig-verify-btn').disabled = false;
+    } catch (err) {
+      alert('Signing error: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign';
+    }
+  };
+
+  // ── Verify signature ──
+  window.runSigVerify = async function () {
+    if (!lastSignature || !lastChallenge) return;
+
+    const btn = document.getElementById('sig-verify-btn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+
+    try {
+      const cryptoKey = await importPublicKey(device.publicKey);
+      const sigBuf = base64urlDecode(lastSignature);
+      const dataBuf = new TextEncoder().encode(lastChallenge);
+
+      const valid = await crypto.subtle.verify(
+        { name: 'ECDSA', hash: { name: 'SHA-256' } },
+        cryptoKey, sigBuf, dataBuf
+      );
+
+      const el = document.getElementById('sig-verified');
+      el.textContent = valid ? 'Signature valid' : 'Signature invalid';
+      el.className = 'sig-verified ' + (valid ? 'valid' : 'invalid');
+    } catch (err) {
+      const el = document.getElementById('sig-verified');
+      el.textContent = 'Verification failed: ' + err.message;
+      el.className = 'sig-verified invalid';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Verify';
+    }
+  };
+
+  // ── Export ──
+  window.exportDevice = function () {
+    const data = device.export();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'obfious-device-' + device.id + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── Destroy ──
+  window.destroyDevice = async function () {
+    if (!confirm('This will permanently delete the device identity from this browser. Continue?')) return;
+    try {
+      await Obfious.Device.destroy();
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('error-state').style.display = 'block';
+      document.getElementById('error-message').textContent = 'Device identity destroyed. Reload the page to generate a new one.';
+      document.querySelector('#error-state h2').textContent = 'Identity destroyed';
+      document.querySelector('#error-state .error-icon').textContent = '';
+    } catch (err) {
+      alert('Destroy error: ' + err.message);
+    }
+  };
+
+  // ── Init ──
+  try {
+    device = await Obfious.Device.create({ debug: true });
+    populateCard();
+    populateComponents();
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('loading').classList.add('hidden');
+  } catch (err) {
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('error-state').style.display = 'block';
+    document.getElementById('error-message').textContent = err.message || String(err);
+  }
+})();
+</script>
+</body>
+</html>

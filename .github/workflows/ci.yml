@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - name: Check bundle size
+        run: |
+          SIZE=$(gzip -c dist/obfious.min.js | wc -c | tr -d ' ')
+          echo "Minified+gzipped size: ${SIZE} bytes"
+          if [ "$SIZE" -gt 25600 ]; then
+            echo "Bundle size exceeds 25KB gzipped limit"
+            exit 1
+          fi
